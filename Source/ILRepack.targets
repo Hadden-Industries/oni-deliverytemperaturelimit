@@ -1,0 +1,18 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="CustomILRepack" AfterTargets="Build">
+        <ItemGroup>
+            <InputAssemblies Include="$(OutputPath)\$(AssemblyName).dll" />
+            <InputAssemblies Include="$(OutputPath)\PLib.dll" />
+        </ItemGroup>
+        <ILRepack
+            Parallel="true"
+            Internalize="true"
+            InputAssemblies="@(InputAssemblies)"
+            TargetKind="Dll"
+            OutputFile="$(MSBuildProjectDirectory)\..\$(AssemblyName).dll"
+            LibraryPath="$(GameFolder)" />
+    </Target>
+    <Target Name="UpdateModInfoVersion" AfterTargets="CustomILRepack">
+        <Exec Command="powershell -Command &quot;(Get-Content '$(MSBuildProjectDirectory)\..\mod_info.yaml') -replace '^version: .*', 'version: $(AssemblyVersion)' | Set-Content '$(MSBuildProjectDirectory)\..\mod_info.yaml'&quot;" />
+    </Target>
+</Project>

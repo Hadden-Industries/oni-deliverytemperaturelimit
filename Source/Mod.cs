@@ -11,6 +11,7 @@ namespace DeliveryTemperatureLimit
         {
             base.OnLoad( harmony );
             PUtil.InitLibrary( false );
+            Localization.RegisterForTranslation(typeof(STRINGS.TEMPERATURELIMIT));
             new POptions().RegisterOptions( this, typeof( Options ));
             ClearableManager_Patch.Patch( harmony );
             FetchManager_PickupComparerIncludingPriority_Patch.Patch( harmony );

@@ -372,7 +372,7 @@ namespace DeliveryTemperatureLimit
                 // Change to:
                 // if (.. && tagBitsHash == num
                 //     && UpdatePickups_Hook( pickup, pickup2 ) == 1 )
-                if( codes[ i ].opcode == OpCodes.Ldfld && codes[ i ].operand is FieldInfo f && f.Name == "masterPriority"
+                if( codes[ i ].opcode == OpCodes.Ldfld && codes[ i ].operand is FieldInfo f2 && f2.Name == "masterPriority"
                     && i + 4 < codes.Count && pickupLoad != -1 && pickup2Load != -1
                     && codes[ i + 1 ].opcode == OpCodes.Bne_Un_S
                     && codes[ i + 2 ].opcode == OpCodes.Ldloc_S

@@ -260,7 +260,7 @@ namespace DeliveryTemperatureLimit
                 // WorldInventoryUpdate_Hook2( item );
                 if( codes[ i ].opcode == OpCodes.Ldloc_S && codes[ i ].operand.ToString().StartsWith( "Pickupable (" )
                     && i + 1 < codes.Count
-                    && codes[ i + 1 ].opcode == OpCodes.Callvirt && codes[ i + 1 ].operand is MethodInfo m && m.Name == "get_TotalAmount" )
+                    && codes[ i + 1 ].opcode == OpCodes.Callvirt && codes[ i + 1 ].operand is MethodInfo m3 && m3.Name == "get_TotalAmount" )
                 {
                     codes.Insert( i + 1, new CodeInstruction( OpCodes.Dup )); // create a copy of 'item'
                     codes.Insert( i + 2, new CodeInstruction( OpCodes.Call,
