@@ -72,97 +72,152 @@ namespace DeliveryTemperatureLimit
             UpdateInputs();
         }
 
+        private bool isUpdating = false;
+
         private void UpdateInputs()
         {
-            if( target == null || lowInput == null )
+            if (isUpdating) return;
+            isUpdating = true;
+            try
+            {
+                UpdateInputsInternal();
+            }
+            finally
+            {
+                isUpdating = false;
+            }
+        }
+
+        private void UpdateInputsInternal()
+        {
+            if (target == null || lowInput == null || highInput == null)
                 return;
-            if( target.IsDisabled())
-                EmptyInputs();
+
+            if (target.IsDisabled())
+            {
+                EmptyInputsInternal();
+            }
             else
             {
-                SetLowValue( target.LowLimit );
-                SetHighValue( target.HighLimit );
+                if (target.LowLimit == TemperatureLimit.MinValue)
+                    SetInputText(lowInput, -1);
+                else
+                    SetInputText(lowInput, target.LowLimit);
+
+                if (target.HighLimit == TemperatureLimit.MaxValue)
+                    SetInputText(highInput, -1);
+                else
+                    SetInputText(highInput, target.HighLimit);
             }
             UpdateToolTip();
+        }
+
+        private void EmptyInputsInternal()
+        {
+            TMP_InputField lowField = lowInput.GetComponent<TMP_InputField>();
+            TMP_InputField highField = highInput.GetComponent<TMP_InputField>();
+            if (lowField.text != "") lowField.text = "";
+            if (highField.text != "") highField.text = "";
+        }
+
+        private void SetInputText(GameObject input, int value)
+        {
+            TMP_InputField field = input.GetComponent<TMP_InputField>();
+            if (value == -1)
+            {
+                if (field.text != "") field.text = "";
+            }
+            else
+            {
+                string text = GameUtil.GetFormattedTemperature(value, GameUtil.TimeSlice.None,
+                    GameUtil.TemperatureInterpretation.Absolute, true, true);
+                if (field.text != text)
+                    field.text = text;
+            }
         }
 
         private void OnTextChangedLow(GameObject source, string text)
         {
-            if( target.IsDisabled())
-                SetHighValue( TemperatureLimit.MaxValue ); // fill in a value in the other one
-            int value = OnTextChanged( text, (int v) => SetLowValue( v ), TemperatureLimit.MinValue );
-            if( value != -1 && value > target.HighLimit )
-                SetHighValue( value );
-            UpdateToolTip();
+            if (isUpdating) return;
+
+            isUpdating = true;
+            try
+            {
+                int value = ParseTemperature(text);
+                if (value == -1)
+                {
+                    target.SetLowLimit(TemperatureLimit.MinValue);
+                    if (target.HighLimit == TemperatureLimit.MaxValue || target.IsDisabled())
+                    {
+                        target.Disable();
+                    }
+                }
+                else
+                {
+                    target.SetLowLimit(value);
+                    if (target.IsDisabled())
+                    {
+                        target.SetHighLimit(TemperatureLimit.MaxValue);
+                    }
+                    else if (value > target.HighLimit)
+                    {
+                        target.SetHighLimit(value);
+                    }
+                }
+                UpdateInputsInternal();
+            }
+            finally
+            {
+                isUpdating = false;
+            }
         }
 
         private void OnTextChangedHigh(GameObject source, string text)
         {
-            if( target.IsDisabled())
-                SetLowValue( TemperatureLimit.MinValue ); // fill in a value in the other one
-            int value = OnTextChanged( text, (int v) => SetHighValue( v ), TemperatureLimit.MaxValue );
-            if( value != -1 && value < target.LowLimit )
-                SetLowValue( value );
-            UpdateToolTip();
+            if (isUpdating) return;
+
+            isUpdating = true;
+            try
+            {
+                int value = ParseTemperature(text);
+                if (value == -1)
+                {
+                    target.SetHighLimit(TemperatureLimit.MaxValue);
+                    if (target.LowLimit == TemperatureLimit.MinValue)
+                    {
+                        target.Disable();
+                    }
+                }
+                else
+                {
+                    target.SetHighLimit(value);
+                    if (value < target.LowLimit)
+                    {
+                        target.SetLowLimit(value);
+                    }
+                }
+                UpdateInputsInternal();
+            }
+            finally
+            {
+                isUpdating = false;
+            }
         }
 
-        private int OnTextChanged( string text, Action< int > setValueFunc, int fallback )
+        private int ParseTemperature(string text)
         {
             text = text.Trim();
-            if( string.IsNullOrEmpty( text ))
-            {
-                target.Disable();
-                EmptyInputs();
+            if (string.IsNullOrEmpty(text))
                 return -1;
-            }
-            // TryParse() can't handle extra text at the end (temperature unit),
-            // so strip it if it's there
-            if( text.EndsWith( GameUtil.GetTemperatureUnitSuffix()))
-                text = text.Remove( text.Length - GameUtil.GetTemperatureUnitSuffix().Length );
+
+            if (text.EndsWith(GameUtil.GetTemperatureUnitSuffix()))
+                text = text.Remove(text.Length - GameUtil.GetTemperatureUnitSuffix().Length);
+
             int result;
-            if(int.TryParse(text, out result))
-                result = (int) Math.Round( GameUtil.GetTemperatureConvertedToKelvin(result));
-            else
-                result = fallback;
-            setValueFunc( result );
-            return result;
-        }
+            if (int.TryParse(text, out result))
+                return (int)Math.Round(GameUtil.GetTemperatureConvertedToKelvin(result));
 
-        private void SetLowValue( int value )
-        {
-            SetValue( value, lowInput,
-                (int v) => target.SetLowLimit( v ),
-                () => target.LowLimit );
-        }
-
-        private void SetHighValue( int value )
-        {
-            SetValue( value, highInput,
-                (int v) => target.SetHighLimit( v ),
-                () => target.HighLimit );
-        }
-
-        private void SetValue( int value, GameObject input, Action< int > setTargetFunc,
-            Func< int > targetValueFunc )
-        {
-            setTargetFunc( value );
-            value = targetValueFunc(); // maybe clamped, so re-read
-            TMP_InputField field = input.GetComponent< TMP_InputField >();
-            string text = GameUtil.GetFormattedTemperature(value, GameUtil.TimeSlice.None,
-                GameUtil.TemperatureInterpretation.Absolute, true, true);
-            if( field.text != text )
-                field.text = text;
-        }
-
-        private void EmptyInputs()
-        {
-            Action< TMP_InputField > resetInput = (TMP_InputField field) =>
-            {
-                if( !string.IsNullOrEmpty( field.text ))
-                    field.text = "";
-            };
-            resetInput( lowInput.GetComponent< TMP_InputField >());
-            resetInput( highInput.GetComponent< TMP_InputField >());
+            return -1;
         }
 
         private void UpdateToolTip()
