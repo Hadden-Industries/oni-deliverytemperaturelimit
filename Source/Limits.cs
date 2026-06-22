@@ -26,15 +26,15 @@ namespace DeliveryTemperatureLimit
         public int HighLimit => highLimit;
 
         // GetComponent() calls may add up being somewhat expensive when called often,
-        // so instead cache the mapping.
-        private static Dictionary< GameObject, TemperatureLimit > fastMap
-            = new Dictionary< GameObject, TemperatureLimit >();
+        // so instead cache the mapping using the GameObject's Instance ID (to avoid C++ native transition overhead).
+        private static Dictionary< int, TemperatureLimit > fastMap
+            = new Dictionary< int, TemperatureLimit >();
 
         public static TemperatureLimit Get( GameObject gameObject )
         {
             if (gameObject == null)
                 return null;
-            if( fastMap.TryGetValue( gameObject, out TemperatureLimit limit ))
+            if( fastMap.TryGetValue( gameObject.GetInstanceID(), out TemperatureLimit limit ))
                 return limit;
             return null;
         }
@@ -95,7 +95,7 @@ namespace DeliveryTemperatureLimit
         protected override void OnSpawn()
         {
             base.OnSpawn();
-            fastMap[ gameObject ] = this;
+            fastMap[ gameObject.GetInstanceID() ] = this;
             allLimits.Add( this );
             SetDirty();
         }
@@ -104,7 +104,7 @@ namespace DeliveryTemperatureLimit
         {
             allLimits.Remove( this );
             SetDirty();
-            fastMap.Remove( gameObject );
+            fastMap.Remove( gameObject.GetInstanceID() );
             base.OnCleanUp();
         }
 
